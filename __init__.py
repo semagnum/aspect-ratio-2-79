@@ -4,7 +4,8 @@ bl_info = {
     "version": (0, 1),
     "blender": (2, 79, 0),
     "description": "Calculates and Generates Settings for Specific Aspect Ratio",
-    "category": "Render",
+    "support": "COMMUNITY",
+    "category": "Render"
 }
 
 import bpy
@@ -68,10 +69,16 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
             color_node.name = ar_node_label
             color_node.correction_method = 'OFFSET_POWER_SLOPE'
             color_node.slope = (0.0, 0.0, 0.0)
+            
+        prev_node = comp_node.inputs[0].links[0].from_node
         
         tree.links.new(box_node.outputs[0], invert_node.inputs[0])
         tree.links.new(invert_node.outputs[0], color_node.inputs[0])
         tree.links.new(color_node.outputs[0], comp_node.inputs[0])
+        
+        if prev_node is not None:
+            if prev_node.name != color_node.name:
+                tree.links.new(prev_node.outputs[0], color_node.inputs[1])
         
         return {'FINISHED'}
 
