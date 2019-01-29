@@ -4,9 +4,6 @@ bl_info = {
     "version": (0, 1),
     "blender": (2, 79, 0),
     "description": "Calculates and Generates Settings for Specific Aspect Ratio",
-    "warning": "",
-    "wiki_url": "",
-    "tracker_url": "",
     "category": "Render",
 }
 
