@@ -2,7 +2,7 @@ bl_info = {
     "name": "Aspect Ratio Calculator",
     "author": "Spencer Magnusson",
     "version": (0, 1),
-    "blender": (2, 80, 0),
+    "blender": (2, 79, 0),
     "description": "Calculates and Generates Settings for Specific Aspect Ratio",
     "warning": "",
     "wiki_url": "",
@@ -84,6 +84,10 @@ class ARP_PT_aspect_ratio_node(bpy.types.Panel):
     bl_label = "Aspect Ratio Node"
     bl_category = "Aspect Ratio"
     bl_region_type = 'TOOLS'
+    
+    @classmethod
+    def poll(cls, context):
+        return context.area.spaces.active.tree_type == 'CompositorNodeTree'
     
     def draw(self, context):
         layout = self.layout
