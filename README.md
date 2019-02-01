@@ -12,3 +12,5 @@ On the left shelf of the compositing window (if it's not visible, press "t" with
 
 ## How to Use
 You can either using the preset aspect ratios, or enter the aspect ratio in decimal form in the "Custom Aspect Ratio" field.  If you don't know the decimal form but have the proportions ("1.85 : 1," for example), enter the width proportion divided by the height proportion, and let Blender calculate it for you (for the previous example, you'd type in "1.85 / 1")!
+
+For the most accuracy with the custom aspect ratio, ensure that your number has at least 4 significant figures.  This will ensure the accuracy of the resolution size.  Otherwise, it may be a little off.
