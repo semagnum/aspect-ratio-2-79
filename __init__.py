@@ -45,9 +45,14 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
         if comp_node is None:
             comp_node = tree.nodes.new(type='CompositorNodeComposite')
     
+        scene = bpy.context.scene
         #set up aspect ratio node
-        box_node.width = 1
-        box_node.height = 1 / self.ratio_float 
+        if self.ratio_float < (scene.render.resolution_x / scene.render.resolution_y):
+            box_node.height = scene.render.resolution_y / scene.render.resolution_x 
+            box_node.width = box_node.height * self.ratio_float
+        else:
+            box_node.width = 1
+            box_node.height = 1 / self.ratio_float
         box_node.label = str(round(self.ratio_float, 2)) + ":1 aspect ratio"
         
         invert_node_label = "Invert Aspect Ratio mask"
@@ -72,7 +77,7 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
             
         prev_node = comp_node.inputs[0].links[0].from_node
         
-        tree.links.new(box_node.outputs[0], invert_node.inputs[0])
+        tree.links.new(box_node.outputs[0], invert_node.inputs[1])
         tree.links.new(invert_node.outputs[0], color_node.inputs[0])
         tree.links.new(color_node.outputs[0], comp_node.inputs[0])
         
@@ -121,7 +126,7 @@ class ARRC_OT_aspect_ratio_resolution_calc(bpy.types.Operator):
     
     def execute(self, context):
         # Get the scene
-        scene = bpy.data.scenes["Scene"]
+        scene = bpy.context.scene
 
         # Set render resolution
         scene.render.resolution_y = round(scene.render.resolution_x / self.ratio_float)
