@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Aspect Ratio Calculator",
     "author": "Spencer Magnusson",
-    "version": (0, 1),
+    "version": (1, 0),
     "blender": (2, 79, 0),
     "description": "Calculates and Generates Settings for Specific Aspect Ratio",
     "support": "COMMUNITY",
