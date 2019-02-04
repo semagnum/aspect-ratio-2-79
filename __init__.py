@@ -51,9 +51,9 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
             box_node.height = scene.render.resolution_y / scene.render.resolution_x 
             box_node.width = box_node.height * self.ratio_float
         else:
-            box_node.width = 1
+            box_node.width = 1.1
             box_node.height = 1 / self.ratio_float
-        box_node.label = str(round(self.ratio_float, 2)) + ":1 aspect ratio"
+        box_node.label = str(round(self.ratio_float, 3)) + ":1 aspect ratio"
         
         invert_node_label = "Invert Aspect Ratio mask"
         invert_node = tree.nodes.get(invert_node_label)
