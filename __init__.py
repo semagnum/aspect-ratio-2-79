@@ -27,26 +27,48 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
         step = 1
     )
     
-    def execute(self, context):
-        # switch on nodes and get reference
-        bpy.context.scene.use_nodes = True
-        tree = bpy.context.scene.node_tree
-        
-        #check for box mask and composite nodes
-        box_node_label = "Aspect Ratio Mask"
-        comp_node = tree.nodes.get('Composite')
-        box_node = color_node = tree.nodes.get(box_node_label)
-
-        if box_node is None:
-            box_node = tree.nodes.new(type='CompositorNodeBoxMask')
-            box_node.name = box_node_label
-            box_node.location = -400, 0
-            
-        if comp_node is None:
-            comp_node = tree.nodes.new(type='CompositorNodeComposite')
+    @classmethod
+    def poll(cls, context):
+        return context.scene.use_nodes and context.area.spaces.active.tree_type == 'CompositorNodeTree'
     
+    def execute(self, context):
+        group_name = "Aspect Ratio"
+        group_box_node_name = "Aspect Ratio Mask"
+
+        # create a group
+        ar_group = bpy.data.node_groups.get(group_name)
+        
+        if ar_group is None:
+            ar_group = bpy.data.node_groups.new(type="CompositorNodeTree", name=group_name)
+            # create group inputs
+            ar_group.inputs.new("NodeSocketColor","Image")
+            group_inputs = ar_group.nodes.new('NodeGroupInput')
+            group_inputs.location = (-550,0)
+            # create group outputs
+            ar_group.outputs.new('NodeSocketColor','Image')
+            group_outputs = ar_group.nodes.new('NodeGroupOutput')
+            group_outputs.location = (600,0)
+            #create box node
+            box_node = ar_group.nodes.new(type='CompositorNodeBoxMask')
+            box_node.name = group_box_node_name
+            box_node.location = -500, 300    
+            #add invert node
+            invert_node = ar_group.nodes.new(type='CompositorNodeInvert')
+            invert_node.location = -250, 70      
+            #set up color balance node that uses mask
+            color_node = ar_group.nodes.new(type='CompositorNodeColorBalance')
+            color_node.correction_method = 'OFFSET_POWER_SLOPE'
+            color_node.slope = (0.0, 0.0, 0.0)
+            #put it all together
+            ar_group.links.new(box_node.outputs[0], invert_node.inputs[1])
+            ar_group.links.new(invert_node.outputs[0], color_node.inputs[0])
+            ar_group.links.new(color_node.outputs[0], group_outputs.inputs['Image'])
+            ar_group.links.new(invert_node.outputs[0], color_node.inputs[0])
+            ar_group.links.new(group_inputs.outputs["Image"], color_node.inputs[1])
+        
+        #set up aspect ratio
+        box_node = ar_group.nodes.get(group_box_node_name)
         scene = bpy.context.scene
-        #set up aspect ratio node
         if self.ratio_float < (scene.render.resolution_x / scene.render.resolution_y):
             box_node.height = scene.render.resolution_y / scene.render.resolution_x 
             box_node.width = box_node.height * self.ratio_float
@@ -55,35 +77,13 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
             box_node.height = 1 / self.ratio_float
         box_node.label = str(round(self.ratio_float, 3)) + ":1 aspect ratio"
         
-        invert_node_label = "Invert Aspect Ratio mask"
-        invert_node = tree.nodes.get(invert_node_label)
+        tree = bpy.context.scene.node_tree
+        group_node = tree.nodes.get(group_name)
         
-        if invert_node is None:
-            invert_node = tree.nodes.new(type='CompositorNodeInvert')
-            invert_node.name = invert_node_label
-            invert_node.label = invert_node_label
-            invert_node.location = -200, 0
-        
-        #set up color balance node that uses mask
-        ar_node_label = "Aspect Ratio"
-        color_node = tree.nodes.get(ar_node_label)
-
-        if color_node is None:
-            color_node = tree.nodes.new(type='CompositorNodeColorBalance')
-            color_node.label = ar_node_label
-            color_node.name = ar_node_label
-            color_node.correction_method = 'OFFSET_POWER_SLOPE'
-            color_node.slope = (0.0, 0.0, 0.0)
-            
-        prev_node = comp_node.inputs[0].links[0].from_node
-        
-        tree.links.new(box_node.outputs[0], invert_node.inputs[1])
-        tree.links.new(invert_node.outputs[0], color_node.inputs[0])
-        tree.links.new(color_node.outputs[0], comp_node.inputs[0])
-        
-        if prev_node is not None:
-            if prev_node.name != color_node.name:
-                tree.links.new(prev_node.outputs[0], color_node.inputs[1])
+        if group_node is None:
+            group_node = tree.nodes.new("CompositorNodeGroup")
+            group_node.node_tree = ar_group
+            group_node.name = group_name
         
         return {'FINISHED'}
 
