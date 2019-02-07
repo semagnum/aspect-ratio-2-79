@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Aspect Ratio Calculator",
     "author": "Spencer Magnusson",
-    "version": (1, 0),
+    "version": (1, 2),
     "blender": (2, 79, 0),
     "description": "Calculates and Generates Settings for Specific Aspect Ratio",
     "support": "COMMUNITY",
@@ -34,6 +34,20 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
     def execute(self, context):
         group_name = "Aspect Ratio"
         group_box_node_name = "Aspect Ratio Mask"
+        
+        scene = context.scene
+        
+        # Set render resolution
+        if scene.ar_ratio_names == 'CS':
+            self.ratio_float = scene.custom_ar_float
+        elif scene.ar_ratio_names == 'SQ':
+            self.ratio_float = 1
+        elif scene.ar_ratio_names == 'FS':
+            self.ratio_float = 4 / 3
+        elif scene.ar_ratio_names == 'WS':
+            self.ratio_float = 16 / 9
+        elif scene.ar_ratio_names == 'WSC':
+            self.ratio_float = 2.35
 
         # create a group
         ar_group = bpy.data.node_groups.get(group_name)
@@ -69,12 +83,23 @@ class ARN_OT_aspect_ratio_node(bpy.types.Operator):
         #set up aspect ratio
         box_node = ar_group.nodes.get(group_box_node_name)
         scene = bpy.context.scene
-        if self.ratio_float < (scene.render.resolution_x / scene.render.resolution_y):
-            box_node.height = scene.render.resolution_y / scene.render.resolution_x 
-            box_node.width = box_node.height * self.ratio_float
-        else:
-            box_node.width = 1.1
-            box_node.height = 1 / self.ratio_float
+        if scene.orientation == 'LS':
+            if self.ratio_float < (scene.render.resolution_x / scene.render.resolution_y):
+                box_node.height = scene.render.resolution_y / scene.render.resolution_x 
+                box_node.width = box_node.height * self.ratio_float
+            else:
+                box_node.width = 1.1
+                box_node.height = 1 / self.ratio_float
+        elif scene.orientation == 'PT':
+            if self.ratio_float > (scene.render.resolution_y / scene.render.resolution_x):
+                box_node.height = scene.render.resolution_y / scene.render.resolution_x
+                box_node.width = box_node.height / self.ratio_float
+                box_node.height += 0.05
+            else:
+                box_node.width = 1.1
+                box_node.height = 1 * self.ratio_float
+                
+        
         box_node.label = str(round(self.ratio_float, 3)) + ":1 aspect ratio"
         
         tree = bpy.context.scene.node_tree
@@ -101,11 +126,11 @@ class ARP_PT_aspect_ratio_node(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         layout.label('Aspect Ratio Node')
-        layout.operator(ARN_OT_aspect_ratio_node.bl_idname, text = '4:3 Fullscreen', icon = "OUTLINER_OB_CAMERA").ratio_float = 4 / 3
-        layout.operator(ARN_OT_aspect_ratio_node.bl_idname, text = '16:9 Widescreen', icon = "OUTLINER_OB_CAMERA").ratio_float = 16 / 9
-        layout.operator(ARN_OT_aspect_ratio_node.bl_idname, text = '21:9 Cinemascope', icon = "OUTLINER_OB_CAMERA").ratio_float = 21 / 9
-        layout.prop(context.scene, 'custom_ar_float')
-        layout.operator(ARN_OT_aspect_ratio_node.bl_idname, text = 'Custom Aspect Ratio', icon = "CAMERA_DATA").ratio_float = context.scene.custom_ar_float
+        layout.prop(context.scene, "ar_ratio_names", expand=True)
+        layout.prop(context.scene, "orientation", expand=True)
+        if context.scene.ar_ratio_names == 'CS':
+            layout.prop(context.scene, 'custom_ar_float')
+        layout.operator(ARN_OT_aspect_ratio_node.bl_idname, text = 'Apply', icon = "CAMERA_DATA")
         
         
 class ARRC_OT_aspect_ratio_resolution_calc(bpy.types.Operator):
@@ -129,7 +154,21 @@ class ARRC_OT_aspect_ratio_resolution_calc(bpy.types.Operator):
         scene = bpy.context.scene
 
         # Set render resolution
-        scene.render.resolution_y = round(scene.render.resolution_x / self.ratio_float)
+        if scene.ar_ratio_names == 'CS':
+            self.ratio_float = scene.custom_ar_float
+        elif scene.ar_ratio_names == 'SQ':
+            self.ratio_float = 1
+        elif scene.ar_ratio_names == 'FS':
+            self.ratio_float = 4 / 3
+        elif scene.ar_ratio_names == 'WS':
+            self.ratio_float = 16 / 9
+        elif scene.ar_ratio_names == 'WSC':
+            self.ratio_float = 2.35
+        
+        if scene.orientation == 'LS':
+            scene.render.resolution_y = round(scene.render.resolution_x / self.ratio_float)
+        elif scene.orientation == 'PT':
+            scene.render.resolution_x = round(scene.render.resolution_y / self.ratio_float)
         return {'FINISHED'}
 
 class ARRP_PT_aspect_ratio_resolution_panel(bpy.types.Panel):
@@ -141,11 +180,13 @@ class ARRP_PT_aspect_ratio_resolution_panel(bpy.types.Panel):
     
     def draw(self, context):
         layout = self.layout
-        layout.operator(ARRC_OT_aspect_ratio_resolution_calc.bl_idname, text = '4:3 Fullscreen', icon = "OUTLINER_OB_CAMERA").ratio_float = 4 / 3
-        layout.operator(ARRC_OT_aspect_ratio_resolution_calc.bl_idname, text = '16:9 Widescreen', icon = "OUTLINER_OB_CAMERA").ratio_float = 16 / 9
-        layout.operator(ARRC_OT_aspect_ratio_resolution_calc.bl_idname, text = '21:9 Cinemascope', icon = "OUTLINER_OB_CAMERA").ratio_float = 21 / 9
-        layout.prop(context.scene, 'custom_ar_float')
-        layout.operator(ARRC_OT_aspect_ratio_resolution_calc.bl_idname, text = 'Custom Aspect Ratio', icon = "CAMERA_DATA").ratio_float = context.scene.custom_ar_float
+        layout.prop(context.scene, "ar_ratio_names", expand=True)
+        layout.prop(context.scene, "orientation", expand=True)
+        if context.scene.ar_ratio_names == 'CS':
+            layout.prop(context.scene, 'custom_ar_float')
+        layout.operator(ARRC_OT_aspect_ratio_resolution_calc.bl_idname, text = 'Apply', icon = "CAMERA_DATA")      
+
+
 
 classes = (ARN_OT_aspect_ratio_node, ARP_PT_aspect_ratio_node, ARRC_OT_aspect_ratio_resolution_calc, ARRP_PT_aspect_ratio_resolution_panel)
 
@@ -163,12 +204,31 @@ def register():
         step = 1
     )
     
+    bpy.types.Scene.ar_ratio_names = bpy.props.EnumProperty(
+        items=[
+            ('CS', 'Custom', '15', 0),
+            ('SQ', '1:1', 'Square', 1),
+            ('FS', '4:3', 'Fullscreen', 2),
+            ('WS', '16:9', 'Widescreen', 3),
+            ('WSC', '2.35', 'Widescreen Cinema', 4)
+        ],
+        default='WS')
+        
+    bpy.types.Scene.orientation = bpy.props.EnumProperty(
+        items=[
+            ('PT', 'Portrait', 'Portrait orientation', 0),
+            ('LS', 'Landscape', 'Landscape orientation', 1)
+        ],
+        default='LS')
+    
     for cls in classes:
         bpy.utils.register_class(cls)
     
  
 def unregister():
     del bpy.types.Scene.custom_ar_float
+    del bpy.types.Scene.ar_ratio_names
+    del bpy.types.Scene.orientation
     
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
