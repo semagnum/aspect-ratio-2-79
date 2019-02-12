@@ -1,4 +1,4 @@
-# Aspect Ratio Generator
+# Aspect Ratio Calculator
 
 There are two places that this addon is used: in the render properties, and the compositing node tree.
 
